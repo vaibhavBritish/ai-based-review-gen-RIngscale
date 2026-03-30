@@ -1,0 +1,169 @@
+{
+  "project_name": "ReviewGen AI Landing Page",
+  "theme": "light",
+  "design_philosophy": {
+    "core": "Swiss Minimalism meets Functional Utility",
+    "principles": [
+      "Content is King: The review text is the primary interface element.",
+      "Frictionless Action: Copying and redirecting must be instant and obvious.",
+      "Trust & Professionalism: Clean typography, ample whitespace, no clutter.",
+      "Client Adaptability: The design must look native to different businesses (Education vs Immigration) via subtle brand color injection."
+    ]
+  },
+  "typography": {
+    "font_family": {
+      "headings": "Manrope, sans-serif",
+      "body": "Inter, sans-serif",
+      "mono": "JetBrains Mono, monospace"
+    },
+    "scale": {
+      "h1": "text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight leading-tight",
+      "h2": "text-3xl md:text-4xl font-bold tracking-tight",
+      "h3": "text-2xl font-semibold tracking-tight",
+      "body_lg": "text-lg leading-relaxed text-slate-600",
+      "body_base": "text-base leading-relaxed text-slate-600",
+      "caption": "text-sm font-medium tracking-wide uppercase text-slate-400"
+    },
+    "weights": {
+      "light": 300,
+      "normal": 400,
+      "medium": 500,
+      "semibold": 600,
+      "bold": 700,
+      "extrabold": 800
+    }
+  },
+  "colors": {
+    "palette": {
+      "background": "#F8FAFC", 
+      "foreground": "#0F172A", 
+      "primary": {
+        "default": "#4F46E5", 
+        "hover": "#4338CA", 
+        "foreground": "#FFFFFF"
+      },
+      "secondary": {
+        "default": "#F1F5F9", 
+        "hover": "#E2E8F0", 
+        "foreground": "#0F172A"
+      },
+      "muted": {
+        "default": "#F1F5F9",
+        "foreground": "#64748B"
+      },
+      "accent": {
+        "default": "#EEF2FF", 
+        "foreground": "#4F46E5"
+      },
+      "border": "#E2E8F0",
+      "card": "#FFFFFF"
+    },
+    "client_branding": {
+      "british-english-academy": {
+        "primary": "#1E3A8A", 
+        "accent": "#EFF6FF"
+      },
+      "uniconnect-immigration": {
+        "primary": "#0F766E", 
+        "accent": "#F0FDFA"
+      }
+    }
+  },
+  "layout": {
+    "grid_system": {
+      "container": "container mx-auto px-4 md:px-6 lg:px-8 max-w-7xl",
+      "section_spacing": "py-12 md:py-20 lg:py-24",
+      "card_grid": "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8"
+    },
+    "spacing": {
+      "p_card": "p-6 md:p-8",
+      "gap_section": "gap-12"
+    }
+  },
+  "components": {
+    "ReviewCard": {
+      "path": "/app/frontend/src/components/ReviewCard.js",
+      "visuals": "bg-white border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 rounded-2xl p-6 md:p-8 flex flex-col justify-between h-full relative group",
+      "typography": "text-lg md:text-xl font-medium text-slate-800 leading-relaxed",
+      "interaction": "Cursor pointer. On click/tap -> Copy text to clipboard -> Show Toast -> Transform card state to 'Copied'."
+    },
+    "HeroSection": {
+      "path": "/app/frontend/src/components/HeroSection.js",
+      "visuals": "flex flex-col items-start justify-center min-h-[40vh] py-12",
+      "elements": [
+        "Badge: 'Review Suggestions' (pill shape, brand color bg/10)",
+        "H1: Dynamic Client Name (e.g., 'British English Academy')",
+        "Subtext: 'Select a review below to copy and post on Google Maps.'"
+      ]
+    },
+    "ActionBar": {
+      "path": "/app/frontend/src/components/ActionBar.js",
+      "visuals": "fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-md border-t border-slate-200 p-4 md:p-6 flex items-center justify-between z-50",
+      "button_style": "rounded-full px-8 py-4 text-lg font-bold shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all"
+    },
+    "ClientLogo": {
+      "path": "/app/frontend/src/components/ClientLogo.js",
+      "visuals": "h-12 w-auto object-contain"
+    }
+  },
+  "assets": {
+    "images": {
+      "british_english_academy": [
+        {
+          "url": "https://images.unsplash.com/photo-1770888844836-8d4617f299af?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NjZ8MHwxfHNlYXJjaHwxfHxicml0aXNoJTIwc3R1ZGVudCUyMGNsYXNzcm9vbSUyMGxvbmRvbnxlbnwwfHx8fDE3NzM3NzQwNjR8MA&ixlib=rb-4.1.0&q=85",
+          "description": "Red telephone box London vibe",
+          "category": "hero_bg"
+        },
+        {
+          "url": "https://images.unsplash.com/photo-1663668044365-a8e23f0f458b?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NjZ8MHwxfHNlYXJjaHwzfHxicml0aXNoJTIwc3R1ZGVudCUyMGNsYXNzcm9vbSUyMGxvbmRvbnxlbnwwfHx8fDE3NzM3NzQwNjR8MA&ixlib=rb-4.1.0&q=85",
+          "description": "Students gathering",
+          "category": "social_proof"
+        }
+      ],
+      "uniconnect_immigration": [
+        {
+          "url": "https://images.unsplash.com/photo-1487637419635-a2a471ff5c7b?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2OTV8MHwxfHNlYXJjaHwyfHxwYXNzcG9ydCUyMHRyYXZlbCUyMGltbWlncmF0aW9uJTIwYWlycG9ydCUyMGZhbWlseXxlbnwwfHx8fDE3NzM3NzQwNjV8MA&ixlib=rb-4.1.0&q=85",
+          "description": "Passport close up",
+          "category": "hero_bg"
+        },
+        {
+          "url": "https://images.unsplash.com/photo-1639034741369-1e0c771adaeb?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2OTV8MHwxfHNlYXJjaHwzfHxwYXNzcG9ydCUyMHRyYXZlbCUyMGltbWlncmF0aW9uJTIwYWlycG9ydCUyMGZhbWlseXxlbnwwfHx8fDE3NzM3NzQwNjV8MA&ixlib=rb-4.1.0&q=85",
+          "description": "Professional workspace",
+          "category": "process"
+        }
+      ]
+    },
+    "icons": {
+      "library": "lucide-react",
+      "required": ["Copy", "Check", "MapPin", "Star", "ArrowRight", "Loader2", "Quote"]
+    }
+  },
+  "motion": {
+    "library": "framer-motion",
+    "transitions": {
+      "default": { "type": "spring", "stiffness": 400, "damping": 30 },
+      "hover": { "duration": 0.2, "ease": "easeOut" }
+    },
+    "animations": {
+      "fadeInUp": {
+        "initial": { "opacity": 0, "y": 20 },
+        "animate": { "opacity": 1, "y": 0 },
+        "exit": { "opacity": 0, "y": -20 }
+      },
+      "staggerContainer": {
+        "animate": { "transition": { "staggerChildren": 0.1 } }
+      }
+    }
+  },
+  "universal_guidelines": [
+    "DO NOT use generic centered layouts. Use left-aligned hero sections for professional feel.",
+    "Use 'sonner' for all toast notifications.",
+    "Ensure 3:1 contrast ratio for all text.",
+    "Interactive elements must have a :focus-visible state.",
+    "No gradients on text unless specifically requested for a creative header.",
+    "Use 'Manrope' for headings and 'Inter' for body.",
+    "All interactive elements must have data-testid attributes.",
+    "Do NOT use 'lorem ipsum'. Use realistic placeholder text related to reviews."
+  ],
+  "instructions_to_main_agent": "1. Install 'framer-motion' and 'sonner' first. \n2. Configure Tailwind with the 'Manrope' font family (might need to import from Google Fonts in index.css). \n3. Create the 'ReviewCard' component with the copy logic. \n4. Implement the Client Landing Page (/:clientSlug) using the assets provided. \n5. Ensure the 'Next' button redirects to the GMB link (mock if needed). \n6. The Review Generation loading state should be a sleek skeleton loader or a subtle spinner, not a full screen blocker."
+}
