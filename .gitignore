@@ -6,7 +6,6 @@
 
 # Dependencies
 node_modules/
-**/node_modules/
 /node_modules
 /.pnp
 .pnp.js
@@ -52,10 +51,6 @@ __pycache__/
 *pyc*
 venv/
 .venv/
-myvenv/
-**/myvenv/
-.env
-**/.env*
 
 # Development tools
 chainlit.md

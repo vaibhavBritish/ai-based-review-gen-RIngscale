@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException
+from fastapi import FastAPI, APIRouter, HTTPException, Header, Depends
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -8,11 +8,23 @@ from pathlib import Path
 from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import anthropic
+import redis.asyncio as redis
+from fastapi_limiter import FastAPILimiter
+from fastapi_limiter.depends import RateLimiter
+from starlette.middleware.base import BaseHTTPMiddleware
+import json
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 ROOT_DIR = Path(__file__).parent
-load_dotenv(ROOT_DIR / '.env')
+load_dotenv(ROOT_DIR / '.env', override=True)
 
 # MongoDB connection
 mongo_url = os.environ['MONGO_URL']
@@ -24,6 +36,36 @@ anthropic_client = anthropic.Anthropic(api_key=os.environ.get('ANTHROPIC_API_KEY
 
 # Create the main app without a prefix
 app = FastAPI()
+
+# Redis connection
+redis_url = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+redis_prefix = os.environ.get('REDIS_PREFIX', 'reviewgen:')
+
+# Force SSL only if explicitly requested via protocol
+is_ssl = redis_url.startswith('rediss://')
+
+redis_kwargs = {
+    "encoding": "utf-8",
+    "decode_responses": True,
+    "socket_timeout": 5.0,
+    "socket_keepalive": True,
+    "retry_on_timeout": True
+}
+
+if is_ssl:
+    redis_kwargs["ssl"] = True
+    redis_kwargs["ssl_cert_reqs"] = None
+
+redis_client = redis.from_url(redis_url, **redis_kwargs)
+
+@app.on_event("startup")
+async def startup():
+    try:
+        await FastAPILimiter.init(redis_client, prefix=redis_prefix)
+        logger.info(f"Successfully initialized Redis and FastAPILimiter with prefix: {redis_prefix}")
+    except Exception as e:
+        logger.error(f"Failed to initialize Redis/Limiter: {str(e)}")
+        # Don't crash the whole app if rate limiting fails to init
 
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
@@ -70,10 +112,27 @@ class StatusCheck(BaseModel):
 class StatusCheckCreate(BaseModel):
     client_name: str
 
+class LoginRequest(BaseModel):
+    password: str
+
+async def verify_admin(x_admin_password: Optional[str] = Header(None)):
+    if x_admin_password != os.environ.get("ADMIN_PASSWORD"):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
 # Routes
 @api_router.get("/")
 async def root():
     return {"message": "ReviewGen API is running"}
+
+@api_router.post("/login")
+async def login(request: LoginRequest):
+    env_password = os.environ.get("ADMIN_PASSWORD")
+    if not env_password:
+        logger.error("ADMIN_PASSWORD environment variable is NOT set!")
+    if request.password == env_password:
+        return {"status": "success"}
+    logger.warning(f"Login failed: password mismatch. Received length: {len(request.password)}, Env length: {len(env_password) if env_password else 'None'}")
+    raise HTTPException(status_code=401, detail="Invalid password")
 
 @api_router.get("/clients/{slug}", response_model=Client)
 async def get_client_by_slug(slug: str):
@@ -93,7 +152,8 @@ async def get_all_clients():
     return clients
 
 @api_router.post("/clients", response_model=Client)
-async def create_client(input: ClientCreate):
+async def create_client(input: ClientCreate, x_admin_password: Optional[str] = Header(None)):
+    await verify_admin(x_admin_password)
     client_dict = input.model_dump()
     client_obj = Client(**client_dict)
     doc = client_obj.model_dump()
@@ -101,8 +161,15 @@ async def create_client(input: ClientCreate):
     await db.clients.insert_one(doc)
     return client_obj
 
-@api_router.post("/generate-reviews", response_model=ReviewResponse)
+@api_router.post("/generate-reviews", response_model=ReviewResponse, dependencies=[Depends(RateLimiter(times=20, seconds=60))])
 async def generate_reviews(request: ReviewRequest):
+    # Check cache first
+    cache_key = f"{redis_prefix}reviews:{request.client_slug}:{request.count}"
+    cached_reviews = await redis_client.get(cache_key)
+    if cached_reviews:
+        logger.info(f"Returning cached reviews for {request.client_slug}")
+        return ReviewResponse(reviews=json.loads(cached_reviews))
+
     # Get client info
     client_doc = await db.clients.find_one({"slug": request.client_slug}, {"_id": 0})
     if not client_doc:
@@ -131,9 +198,10 @@ Requirements:
 Return ONLY the reviews, one per line, separated by "|||" delimiter. No numbering, no quotes, no extra text."""
 
     try:
+        model_name = os.environ.get('ANTHROPIC_MODEL', 'claude-3-5-sonnet-20240620')
         message = anthropic_client.messages.create(
-            model="claude-sonnet-4-5-20250929",
-            max_tokens=2000,
+            model=model_name,
+            max_tokens=1000,
             messages=[
                 {"role": "user", "content": prompt}
             ]
@@ -141,8 +209,16 @@ Return ONLY the reviews, one per line, separated by "|||" delimiter. No numberin
         
         response_text = message.content[0].text
         reviews = [r.strip() for r in response_text.split("|||") if r.strip()]
+        final_reviews = reviews[:count]
         
-        return ReviewResponse(reviews=reviews[:count])
+        # Store in cache (expire in 24 hours)
+        await redis_client.setex(
+            cache_key,
+            timedelta(hours=24),
+            json.dumps(final_reviews)
+        )
+        
+        return ReviewResponse(reviews=final_reviews)
     except Exception as e:
         logging.error(f"Error generating reviews: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to generate reviews: {str(e)}")
@@ -219,6 +295,15 @@ async def seed_clients():
 # Include the router in the main app
 app.include_router(api_router)
 
+# Custom Middleware for Private Network Access (PNA)
+class PNAMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        if request.method == "OPTIONS" and request.headers.get("access-control-request-private-network"):
+            response = await call_next(request)
+            response.headers["Access-Control-Allow-Private-Network"] = "true"
+            return response
+        return await call_next(request)
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
@@ -227,12 +312,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+# PNAMiddleware must be added AFTER CORSMiddleware to be the outermost
+app.add_middleware(PNAMiddleware)
 
 @app.on_event("shutdown")
 async def shutdown_db_client():

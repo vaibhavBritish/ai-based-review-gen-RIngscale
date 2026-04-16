@@ -176,6 +176,11 @@ export const HomePage = () => {
       <footer className="py-8 border-t border-slate-200">
         <div className="container mx-auto px-4 text-center text-slate-500 text-sm">
           <p>ReviewGen - AI-Powered Review Suggestions</p>
+          <div className="mt-4">
+            <Link to="/admin" className="text-slate-300 hover:text-indigo-400 font-medium transition-colors">
+              Admin Portal
+            </Link>
+          </div>
         </div>
       </footer>
     </div>

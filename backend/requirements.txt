@@ -101,6 +101,8 @@ requests-oauthlib==2.0.0
 rich==14.3.3
 rpds-py==0.30.0
 rsa==4.9.1
+redis==5.0.1
+fastapi-limiter==0.1.6
 s3transfer==0.16.0
 s5cmd==0.2.0
 shellingham==1.5.4

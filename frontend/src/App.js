@@ -4,6 +4,7 @@ import { Toaster } from "sonner";
 
 import HomePage from "./pages/HomePage";
 import ClientLandingPage from "./pages/ClientLandingPage";
+import AdminDashboard from "./pages/AdminDashboard";
 
 function App() {
   return (
@@ -20,6 +21,7 @@ function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<HomePage />} />
+          <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/:clientSlug" element={<ClientLandingPage />} />
         </Routes>
       </BrowserRouter>
