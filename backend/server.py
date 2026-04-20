@@ -112,27 +112,10 @@ class StatusCheck(BaseModel):
 class StatusCheckCreate(BaseModel):
     client_name: str
 
-class LoginRequest(BaseModel):
-    password: str
-
-async def verify_admin(x_admin_password: Optional[str] = Header(None)):
-    if x_admin_password != os.environ.get("ADMIN_PASSWORD"):
-        raise HTTPException(status_code=401, detail="Unauthorized")
-
 # Routes
 @api_router.get("/")
 async def root():
     return {"message": "ReviewGen API is running"}
-
-@api_router.post("/login")
-async def login(request: LoginRequest):
-    env_password = os.environ.get("ADMIN_PASSWORD")
-    if not env_password:
-        logger.error("ADMIN_PASSWORD environment variable is NOT set!")
-    if request.password == env_password:
-        return {"status": "success"}
-    logger.warning(f"Login failed: password mismatch. Received length: {len(request.password)}, Env length: {len(env_password) if env_password else 'None'}")
-    raise HTTPException(status_code=401, detail="Invalid password")
 
 @api_router.get("/clients/{slug}", response_model=Client)
 async def get_client_by_slug(slug: str):
@@ -152,8 +135,7 @@ async def get_all_clients():
     return clients
 
 @api_router.post("/clients", response_model=Client)
-async def create_client(input: ClientCreate, x_admin_password: Optional[str] = Header(None)):
-    await verify_admin(x_admin_password)
+async def create_client(input: ClientCreate):
     client_dict = input.model_dump()
     client_obj = Client(**client_dict)
     doc = client_obj.model_dump()

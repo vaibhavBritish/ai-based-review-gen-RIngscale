@@ -11,11 +11,7 @@ import {
   Trash2, 
   ExternalLink,
   ChevronRight,
-  Info,
-  Lock,
-  Unlock,
-  LogOut,
-  ShieldCheck
+  Info
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -38,9 +34,6 @@ const BACKEND_URL = (process.env.REACT_APP_BACKEND_URL || "").replace(/\/+$/, ""
 const API = `${BACKEND_URL}/api`;
 
 export const AdminDashboard = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [password, setPassword] = useState("");
-  const [loginLoading, setLoginLoading] = useState(false);
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -60,68 +53,17 @@ export const AdminDashboard = () => {
   });
 
   useEffect(() => {
-    const savedPassword = localStorage.getItem("admin_password");
-    if (savedPassword) {
-      verifyStoredPassword(savedPassword);
-    } else {
-      setLoading(false);
-    }
+    fetchClients();
   }, []);
 
-  const verifyStoredPassword = async (pwd) => {
-    try {
-      setLoginLoading(true);
-      await axios.post(`${API}/login`, { password: pwd });
-      setIsAuthenticated(true);
-      setPassword(pwd);
-      fetchClients(pwd);
-    } catch (err) {
-      localStorage.removeItem("admin_password");
-      toast.error("Session expired. Please login again.");
-    } finally {
-      setLoginLoading(false);
-      setLoading(false);
-    }
-  };
-
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    try {
-      setLoginLoading(true);
-      await axios.post(`${API}/login`, { password });
-      localStorage.setItem("admin_password", password);
-      setIsAuthenticated(true);
-      fetchClients(password);
-      toast.success("Login successful");
-    } catch (err) {
-      toast.error("Invalid admin password");
-    } finally {
-      setLoginLoading(false);
-    }
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem("admin_password");
-    setIsAuthenticated(false);
-    setPassword("");
-    setClients([]);
-    toast.info("Logged out successfully");
-  };
-
-  const fetchClients = async (authPwd = password) => {
+  const fetchClients = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API}/clients`, {
-        headers: { "X-Admin-Password": authPwd }
-      });
+      const response = await axios.get(`${API}/clients`);
       setClients(response.data);
     } catch (err) {
       console.error("Error fetching clients:", err);
-      if (err.response?.status === 401) {
-        handleLogout();
-      } else {
-        toast.error("Failed to load businesses");
-      }
+      toast.error("Failed to load businesses");
     } finally {
       setLoading(false);
     }
@@ -176,9 +118,7 @@ export const AdminDashboard = () => {
       const cleanedFeatures = formData.key_features.filter(f => f.trim() !== "");
       const submitData = { ...formData, key_features: cleanedFeatures };
 
-      await axios.post(`${API}/clients`, submitData, {
-        headers: { "X-Admin-Password": password }
-      });
+      await axios.post(`${API}/clients`, submitData);
       toast.success("Business created successfully!");
       
       setFormData({
@@ -202,60 +142,10 @@ export const AdminDashboard = () => {
     }
   };
 
-  if (loading && !isAuthenticated) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <Loader2 size={48} className="animate-spin text-indigo-500" />
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-        <motion.div
-           initial={{ opacity: 0, scale: 0.95 }}
-           animate={{ opacity: 1, scale: 1 }}
-           className="w-full max-w-md"
-        >
-          <Card className="shadow-2xl border-none">
-            <CardHeader className="text-center space-y-2">
-              <div className="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4 text-white shadow-lg shadow-indigo-100">
-                <Lock size={32} />
-              </div>
-              <CardTitle className="text-2xl font-bold">Admin Access</CardTitle>
-              <CardDescription>Enter your administrator password to continue.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleLogin} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
-                  <Input 
-                    id="password" 
-                    type="password" 
-                    placeholder="••••••••" 
-                    className="py-6"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                  />
-                </div>
-                <Button 
-                  type="submit" 
-                  disabled={loginLoading}
-                  className="w-full py-6 bg-indigo-600 hover:bg-indigo-700 font-bold text-lg"
-                >
-                  {loginLoading ? <Loader2 className="animate-spin" /> : "Unlock Dashboard"}
-                </Button>
-                <div className="text-center">
-                  <Link to="/" className="text-sm text-slate-400 hover:text-slate-600 flex items-center justify-center gap-1">
-                    <ArrowLeft size={14} /> Back to Portal
-                  </Link>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-        </motion.div>
       </div>
     );
   }
@@ -270,17 +160,13 @@ export const AdminDashboard = () => {
               <div className="bg-indigo-600 text-white p-1 rounded-lg">
                 <Store size={20} />
               </div>
-              ReviewGen <span className="text-slate-400 font-medium ml-1">Admin</span>
+              ReviewGen <span className="text-slate-400 font-medium ml-1">Portal</span>
             </Link>
-            <Badge variant="outline" className="text-indigo-500 bg-indigo-50 border-indigo-100 gap-1 hidden sm:flex">
-              <ShieldCheck size={12} /> Secure Session
-            </Badge>
           </div>
           
           <div className="flex items-center gap-4">
-            <Button variant="ghost" onClick={handleLogout} className="text-slate-600 hover:text-red-500 hover:bg-red-50 gap-2">
-              <LogOut size={18} />
-              <span className="hidden sm:inline">Logout</span>
+            <Button variant="outline" asChild className="rounded-full">
+              <Link to="/">Exit Admin</Link>
             </Button>
           </div>
         </div>
