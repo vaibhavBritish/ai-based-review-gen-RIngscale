@@ -5,7 +5,9 @@ import axios from "axios";
 import { Star, ArrowRight, Sparkles, Loader2 } from "lucide-react";
 import { Button } from "../components/ui/button";
 
-const BACKEND_URL = (process.env.REACT_APP_BACKEND_URL || "").replace(/\/+$/, "");
+const BACKEND_URL = typeof window !== 'undefined' && window.location.hostname === 'review-gen.ringscaleai.com' 
+  ? "https://api.review-gen.ringscaleai.com" 
+  : (process.env.REACT_APP_BACKEND_URL || "").replace(/\/+$/, "");
 const API = `${BACKEND_URL}/api`;
 
 export const HomePage = () => {

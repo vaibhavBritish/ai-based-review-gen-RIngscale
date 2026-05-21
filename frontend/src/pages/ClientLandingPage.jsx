@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import axios from "axios";
@@ -12,7 +12,9 @@ import { ReviewSkeleton } from "../components/ReviewSkeleton";
 import { Button } from "../components/ui/button";
 import { Slider } from "../components/ui/slider";
 
-const BACKEND_URL = (process.env.REACT_APP_BACKEND_URL || "").replace(/\/+$/, "");
+const BACKEND_URL = typeof window !== 'undefined' && window.location.hostname === 'review-gen.ringscaleai.com' 
+  ? "https://api.review-gen.ringscaleai.com" 
+  : (process.env.REACT_APP_BACKEND_URL || "").replace(/\/+$/, "");
 const API = `${BACKEND_URL}/api`;
 
 export const ClientLandingPage = () => {
@@ -24,6 +26,26 @@ export const ClientLandingPage = () => {
   const [generatingReviews, setGeneratingReviews] = useState(false);
   const [error, setError] = useState(null);
   const [reviewCount, setReviewCount] = useState(5);
+
+  // Generate reviews
+  const generateReviews = useCallback(async (slug) => {
+    try {
+      setGeneratingReviews(true);
+      const response = await axios.post(`${API}/generate-reviews`, {
+        client_slug: slug || clientSlug,
+        count: reviewCount,
+      });
+      setReviews(response.data.reviews);
+      setSelectedReview(null);
+      toast.success(`Generated ${response.data.reviews.length} review suggestions!`);
+    } catch (err) {
+      console.error("Error generating reviews:", err);
+      toast.error("Failed to generate reviews. Please try again.");
+    } finally {
+      setGeneratingReviews(false);
+      setLoading(false);
+    }
+  }, [clientSlug, reviewCount]);
 
   // Fetch client data
   useEffect(() => {
@@ -49,27 +71,7 @@ export const ClientLandingPage = () => {
     if (clientSlug) {
       fetchClient();
     }
-  }, [clientSlug]);
-
-  // Generate reviews
-  const generateReviews = async (slug) => {
-    try {
-      setGeneratingReviews(true);
-      const response = await axios.post(`${API}/generate-reviews`, {
-        client_slug: slug || clientSlug,
-        count: reviewCount,
-      });
-      setReviews(response.data.reviews);
-      setSelectedReview(null);
-      toast.success(`Generated ${response.data.reviews.length} review suggestions!`);
-    } catch (err) {
-      console.error("Error generating reviews:", err);
-      toast.error("Failed to generate reviews. Please try again.");
-    } finally {
-      setGeneratingReviews(false);
-      setLoading(false);
-    }
-  };
+  }, [clientSlug, generateReviews]);
 
   const handleSelectReview = (review) => {
     setSelectedReview(review);

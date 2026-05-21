@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
@@ -30,7 +30,9 @@ import {
 } from "../components/ui/table";
 import { Badge } from "../components/ui/badge";
 
-const BACKEND_URL = (process.env.REACT_APP_BACKEND_URL || "").replace(/\/+$/, "");
+const BACKEND_URL = typeof window !== 'undefined' && window.location.hostname === 'review-gen.ringscaleai.com' 
+  ? "https://api.review-gen.ringscaleai.com" 
+  : (process.env.REACT_APP_BACKEND_URL || "").replace(/\/+$/, "");
 const API = `${BACKEND_URL}/api`;
 
 export const AdminDashboard = () => {
@@ -52,11 +54,7 @@ export const AdminDashboard = () => {
     key_features: [""]
   });
 
-  useEffect(() => {
-    fetchClients();
-  }, []);
-
-  const fetchClients = async () => {
+  const fetchClients = useCallback(async () => {
     try {
       setLoading(true);
       const response = await axios.get(`${API}/clients`);
@@ -67,7 +65,11 @@ export const AdminDashboard = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchClients();
+  }, [fetchClients]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;

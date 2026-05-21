@@ -1,6 +1,5 @@
 from fastapi import FastAPI, APIRouter, HTTPException, Header, Depends
 from dotenv import load_dotenv
-from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
@@ -34,8 +33,21 @@ db = client[os.environ['DB_NAME']]
 # Anthropic client
 anthropic_client = anthropic.Anthropic(api_key=os.environ.get('ANTHROPIC_API_KEY'))
 
+from fastapi.middleware.cors import CORSMiddleware
+
 # Create the main app without a prefix
 app = FastAPI()
+
+cors_origins = [o.strip() for o in os.environ.get('CORS_ORIGINS', '*').split(',')]
+logger.info(f"Loaded CORS origins: {cors_origins}")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=cors_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Redis connection
 redis_url = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
@@ -49,7 +61,8 @@ redis_kwargs = {
     "decode_responses": True,
     "socket_timeout": 5.0,
     "socket_keepalive": True,
-    "retry_on_timeout": True
+    "retry_on_timeout": True,
+    "health_check_interval": 30
 }
 
 if is_ssl:
@@ -180,7 +193,7 @@ Requirements:
 Return ONLY the reviews, one per line, separated by "|||" delimiter. No numbering, no quotes, no extra text."""
 
     try:
-        model_name = os.environ.get('ANTHROPIC_MODEL', 'claude-3-5-sonnet-20240620')
+        model_name = os.environ.get('ANTHROPIC_MODEL', 'claude-sonnet-4-20250514')
         message = anthropic_client.messages.create(
             model=model_name,
             max_tokens=1000,
@@ -286,17 +299,15 @@ class PNAMiddleware(BaseHTTPMiddleware):
             return response
         return await call_next(request)
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 # PNAMiddleware must be added AFTER CORSMiddleware to be the outermost
 app.add_middleware(PNAMiddleware)
 
 @app.on_event("shutdown")
-async def shutdown_db_client():
+async def shutdown_event():
     client.close()
+    try:
+        await FastAPILimiter.close()
+    except Exception:
+        pass
+    await redis_client.close()
